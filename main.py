@@ -1,6 +1,11 @@
-def main():
-    print("Hello from vectorless-rag!")
+from fastapi import FastAPI
 
+from app.api.upload import router as upload_router
+from app.api.chat import router as chat_router
 
-if __name__ == "__main__":
-    main()
+app = FastAPI(
+    title="Production PDF Vectorless RAG"
+)
+
+app.include_router(upload_router)
+app.include_router(chat_router)

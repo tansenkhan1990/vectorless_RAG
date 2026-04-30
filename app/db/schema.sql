@@ -1,4 +1,8 @@
--- Placeholder for database schemacreate extension if not exists pgcrypto;
+-- Vectorless RAG Database Schema for Supabase
+-- This schema creates tables and functions for document storage and semantic search
+
+-- Enable required extensions
+create extension if not exists pgcrypto;
 
 create table documents (
     id uuid primary key default gen_random_uuid(),

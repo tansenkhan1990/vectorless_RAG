@@ -36,4 +36,5 @@ def retrieve_docs(query: str, match_count: int = 5):
         }
     ).execute()
 
+    print(f"[DEBUG] retrieve_docs query='{query}' → {len(result.data)} chunks found")
     return result.data

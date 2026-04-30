@@ -6,7 +6,7 @@ from langgraph.graph import StateGraph, END
 
 from app.retrieval.retriever import retrieve_docs
 from app.prompts.templates import build_prompt
-from app.agents.answer_agent import answer_agent
+from app.agents.answer_agent import answer_question
 
 
 class State(TypedDict):
@@ -44,7 +44,7 @@ def answer_node(state: State) -> dict:
     Second node: Generate answer using agent.
     
     Builds a prompt with retrieved documents and query, then uses
-    the OpenAI Agent to generate an answer based only on provided context.
+    OpenAI to generate an answer based only on provided context.
     
     Args:
         state (State): Current workflow state with query and docs
@@ -57,9 +57,9 @@ def answer_node(state: State) -> dict:
         state["docs"]
     )
 
-    result = answer_agent.run(prompt)
+    answer = answer_question(prompt)
 
-    return {"answer": result.final_output}
+    return {"answer": answer}
 
 
 # Build the workflow graph

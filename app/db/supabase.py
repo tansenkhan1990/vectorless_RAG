@@ -14,7 +14,7 @@ supabase = create_client(
 # Verify connection on import
 try:
     # Test connection with a simple query
-    test = supabase.table("documents").select("*", count="exact").limit(1).execute()
+    test = supabase.table("pdf_documents").select("*", count="exact").limit(1).execute()
     print(f"✓ Connected to Supabase - Found {test.count or 0} documents")
 except Exception as e:
     print(f"⚠️  Supabase connection error: {e}")

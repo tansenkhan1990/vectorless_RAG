@@ -48,7 +48,7 @@ def ingest_pdf(file_path, file_name):
         # Store each chunk in database with metadata
         for chunk in chunks:
             if chunk.strip():  # Only store non-empty chunks
-                supabase.table("documents").insert({
+                supabase.table("pdf_documents").insert({
                     "file_name": file_name,
                     "page_number": page_num,
                     "chunk_text": chunk

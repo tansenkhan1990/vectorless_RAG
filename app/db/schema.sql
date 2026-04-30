@@ -4,7 +4,7 @@
 -- Enable required extensions
 create extension if not exists pgcrypto;
 
-create table documents (
+create table pdf_documents (
     id uuid primary key default gen_random_uuid(),
     file_name text,
     page_number int,
@@ -14,7 +14,7 @@ create table documents (
 );
 
 create index idx_docs_search
-on documents using gin(tsv);
+on pdf_documents using gin(tsv);
 
 create function update_tsv()
 returns trigger as $$
@@ -29,7 +29,7 @@ $$ language plpgsql;
 
 create trigger trg_docs
 before insert or update
-on documents
+on pdf_documents
 for each row execute function update_tsv();
 
 create or replace function search_docs(
@@ -44,7 +44,7 @@ chunk_text text
 language sql
 as $$
 select file_name, page_number, chunk_text
-from documents
+from pdf_documents
 where tsv @@ plainto_tsquery(search_query)
 order by ts_rank(tsv, plainto_tsquery(search_query)) desc
 limit match_count;

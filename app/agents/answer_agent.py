@@ -1,38 +1,26 @@
-from openai import OpenAI
+# PDF Knowledge Agent
+# Uses OpenAI Agents SDK with retrieval tool for RAG
+
+from agents import Agent
 from app.config.settings import settings
+from app.retrieval.retriever import retrieve_docs
 
-# Initialize the OpenAI client for agent functionality
-client = OpenAI(
-    api_key=settings.API_KEY,
-    base_url=settings.BASE_URL
+# Initialize the PDF Knowledge Agent with retrieval tool
+# The agent autonomously decides when to search documents
+answer_agent = Agent(
+    name="PDFKnowledgeAgent",
+    model=settings.MODEL,
+    instructions="""
+You are a PDF Knowledge Agent. Your job is to answer user questions 
+based ONLY on content from uploaded PDF documents.
+
+Rules:
+1. ALWAYS use the retrieve_docs tool first to search for relevant content.
+2. Answer ONLY from the retrieved document context.
+3. Never hallucinate or make up information.
+4. If no relevant content is found, respond with: "I don't know."
+5. Be precise and cite the source file name and page number.
+6. Keep answers clear and well-structured.
+""",
+    tools=[retrieve_docs],
 )
-
-# Initialize the PDF Knowledge Agent using raw OpenAI client
-# This agent is configured to answer questions based only on provided PDF content
-def answer_question(prompt: str) -> str:
-    """
-    Generate an answer using OpenAI API based on the provided prompt.
-    
-    Args:
-        prompt (str): The formatted prompt with context and question
-    
-    Returns:
-        str: The generated answer
-    """
-    response = client.chat.completions.create(
-        model=settings.MODEL,
-        messages=[
-            {
-                "role": "system",
-                "content": "Answer only from provided PDF content. Never hallucinate. If the answer is not found in the provided context, say \"I don't know.\" Be precise and cite specific information from the documents."
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        temperature=0.7,
-        max_tokens=1000
-    )
-    
-    return response.choices[0].message.content

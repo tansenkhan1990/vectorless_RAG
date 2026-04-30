@@ -1,78 +1,64 @@
-# LangGraph Workflow Module
-# Orchestrates the RAG pipeline: retrieval -> answer generation
+# Workflow Module
+# Runs the Agent pipeline using OpenAI Agents SDK Runner
 
-from typing import TypedDict
-from langgraph.graph import StateGraph, END
-
-from app.retrieval.retriever import retrieve_docs
-from app.prompts.templates import build_prompt
-from app.agents.answer_agent import answer_question
+from agents import Runner
+from app.agents.answer_agent import answer_agent
 
 
-class State(TypedDict):
+def run_query(query: str) -> dict:
     """
-    Workflow state that flows through the graph nodes.
-    
-    Attributes:
-        query (str): User's question
-        docs (list): Retrieved document chunks
-        answer (str): Generated answer from agent
-    """
-    query: str
-    docs: list
-    answer: str
+    Run a user query through the PDF Knowledge Agent.
 
+    The agent will:
+    1. Use its retrieve_docs tool to search Supabase
+    2. Analyze the retrieved context
+    3. Generate a grounded answer
 
-def retrieve_node(state: State) -> dict:
-    """
-    First node: Retrieve relevant documents.
-    
-    Takes the user's query and searches Supabase for matching document chunks.
-    
     Args:
-        state (State): Current workflow state with query
-    
+        query (str): User's question about uploaded PDF documents
+
     Returns:
-        dict: Updated state with retrieved documents
+        dict: Result with keys:
+            - answer (str): The agent's answer
+            - sources (list[str]): Source PDF filenames used
     """
-    docs = retrieve_docs(state["query"])
-    return {"docs": docs}
+    result = Runner.run_sync(answer_agent, query)
+
+    # Extract source filenames from tool call results
+    sources = _extract_sources(result)
+
+    return {
+        "answer": result.final_output,
+        "sources": sources
+    }
 
 
-def answer_node(state: State) -> dict:
+def _extract_sources(result) -> list[str]:
     """
-    Second node: Generate answer using agent.
-    
-    Builds a prompt with retrieved documents and query, then uses
-    OpenAI to generate an answer based only on provided context.
-    
+    Extract unique source PDF filenames from the agent's tool calls.
+
+    Parses the raw_responses to find retrieve_docs tool outputs
+    and extracts [Source: filename, Page N] patterns.
+
     Args:
-        state (State): Current workflow state with query and docs
-    
+        result: RunResult from the Agent runner
+
     Returns:
-        dict: Updated state with generated answer
+        list[str]: Unique PDF filenames referenced in the answer
     """
-    prompt = build_prompt(
-        state["query"],
-        state["docs"]
-    )
+    import re
 
-    answer = answer_question(prompt)
+    sources = set()
 
-    return {"answer": answer}
+    # Walk through all items in the run to find tool outputs
+    for item in result.new_items:
+        # Check for tool output items
+        if hasattr(item, 'output') and isinstance(item.output, str):
+            # Extract filenames from [Source: filename, Page N] pattern
+            matches = re.findall(
+                r'\[Source:\s*(.+?),\s*Page\s*\d+\]',
+                item.output
+            )
+            sources.update(matches)
 
-
-# Build the workflow graph
-builder = StateGraph(State)
-
-# Add nodes
-builder.add_node("retrieve", retrieve_node)
-builder.add_node("answer", answer_node)
-
-# Define flow: retrieve -> answer -> end
-builder.set_entry_point("retrieve")
-builder.add_edge("retrieve", "answer")
-builder.add_edge("answer", END)
-
-# Compile graph into executable workflow
-graph = builder.compile()
+    return list(sources)

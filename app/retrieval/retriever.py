@@ -1,32 +1,24 @@
-# Document Retrieval Module
-# Handles semantic search and retrieval of relevant document chunks
+# Document Retrieval Tool
+# Registered as an Agent function_tool for semantic search over Supabase
 
+from agents import function_tool
 from app.db.supabase import supabase
 
 
-def retrieve_docs(query: str, match_count: int = 5):
+@function_tool
+def retrieve_docs(query: str, match_count: int = 5) -> str:
     """
-    Search for relevant document chunks based on query.
-    
-    This function uses Supabase's full-text search RPC to find documents
-    matching the user's query. Results are ranked by relevance.
-    
+    Search for relevant PDF document chunks based on query.
+
+    This tool searches Supabase using full-text search to find document
+    chunks matching the user's question. Results are ranked by relevance.
+
     Args:
-        query (str): The search query
-        match_count (int): Number of results to return (default: 5)
-    
+        query: The search query to find relevant document chunks.
+        match_count: Number of results to return (default: 5).
+
     Returns:
-        list: List of document chunks with metadata:
-            - file_name: Name of the PDF
-            - page_number: Page number in PDF
-            - chunk_text: The actual text content
-    
-    Example:
-        >>> docs = retrieve_docs("What is machine learning?")
-        >>> len(docs)
-        5
-        >>> docs[0]["file_name"]
-        'AI_guide.pdf'
+        Formatted string of matching document chunks with source metadata.
     """
     result = supabase.rpc(
         "search_docs",
@@ -36,5 +28,16 @@ def retrieve_docs(query: str, match_count: int = 5):
         }
     ).execute()
 
-    print(f"[DEBUG] retrieve_docs query='{query}' → {len(result.data)} chunks found")
-    return result.data
+    docs = result.data
+
+    if not docs:
+        return "No relevant documents found."
+
+    # Format results so the agent sees structured context
+    formatted = []
+    for d in docs:
+        formatted.append(
+            f"[Source: {d['file_name']}, Page {d['page_number']}]\n{d['chunk_text']}"
+        )
+
+    return "\n\n---\n\n".join(formatted)
